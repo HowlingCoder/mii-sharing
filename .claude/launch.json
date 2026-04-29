@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/dev-server.mjs"],
+      "env": { "PORT": "8090", "MII_SAV_PATH": "./testdata/Mii.sav" },
+      "port": 8090
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["web:dev"],
+      "port": 5173
+    }
+  ]
+}
