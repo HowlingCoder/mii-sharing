@@ -1,0 +1,16 @@
+/*.nro
+/*.nsp
+/node_modules
+/romfs/main.js
+/romfs/main.js.map
+/romfs/web/assets/
+/romfs/logo.png
+/romfs/icon.png
+/web/dist/
+.env
+.env.local
+.claude/settings.local.json
+/testdata/
+.DS_Store
+Thumbs.db
+*.log

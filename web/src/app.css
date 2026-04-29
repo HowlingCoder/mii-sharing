@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme {
+  /* Tomodachi Yellow */
+  --color-td-yellow:        #FFD000;
+  --color-td-yellow-dark:   #E6BB00;
+  --color-td-yellow-light:  #FFF3A3;
+
+  /* Switch Settings palette */
+  --color-sw-bg:            #F0F0F0;
+  --color-sw-surface:       #FFFFFF;
+  --color-sw-sidebar:       #FFFFFF;
+  --color-sw-footer:        #E8E8E8;
+  --color-sw-border:        #DDDDDD;
+  --color-sw-divider:       #E4E4E4;
+  --color-sw-text:          #1A1A1A;
+  --color-sw-text-muted:    #888888;
+  --color-sw-selected-bar:  #FFD000;
+
+  --font-switch: "Nintendo NTR", "游ゴシック", "Yu Gothic", system-ui, sans-serif;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#app {
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--color-sw-bg);
+  font-family: var(--font-switch);
+  color: var(--color-sw-text);
+  font-size: 16px;
+}

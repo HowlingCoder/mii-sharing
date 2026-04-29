@@ -1,0 +1,48 @@
+{
+  "name": "mii-sharing",
+  "author": "HowlingCoder <howlingcoder@eselmail.eu>",
+  "version": "0.0.0",
+  "private": true,
+  "description": "",
+  "scripts": {
+    "build": "esbuild --bundle --sourcemap --sources-content=false --target=es2022 --format=esm --outdir=romfs src/main.ts && cp logo.png romfs/ && (cp icon.png romfs/icon.png 2>/dev/null || cp logo.png romfs/icon.png)",
+    "nro": "nxjs-nro",
+    "nsp": "nxjs-nsp",
+    "web:dev": "vite --config web/vite.config.ts",
+    "web:build": "vite build --config web/vite.config.ts",
+    "build:all": "pnpm build && pnpm web:build",
+    "deploy": "pnpm build:all && pnpm nro",
+    "push": "pnpm run deploy && nxlink -s mii-sharing.nro -a ${SWITCH_IP:-192.168.178.120}",
+    "dev:api": "MII_SAV_PATH=./testdata/Mii.sav PORT=8090 node scripts/dev-server.mjs",
+    "dev": "concurrently \"pnpm dev:api\" \"pnpm web:dev\"",
+    "typecheck": "tsc --noEmit && svelte-check --tsconfig web/tsconfig.json",
+    "typecheck:src": "tsc --noEmit",
+    "typecheck:web": "svelte-check --tsconfig web/tsconfig.json"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@nx.js/nro": "^0.0.69",
+    "@nx.js/nsp": "^0.0.69",
+    "@nx.js/runtime": "^0.0.69",
+    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "@tailwindcss/vite": "^4.2.4",
+    "@types/qrcode-generator": "^1.0.6",
+    "concurrently": "^9.2.1",
+    "esbuild": "^0.27.3",
+    "svelte": "^5.55.5",
+    "svelte-check": "^4.4.6",
+    "tailwindcss": "^4.2.4",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.10"
+  },
+  "nacp": {
+    "id": "01d82aba825f0000"
+  },
+  "dependencies": {
+    "@nx.js/constants": "^0.4.0",
+    "@nx.js/http": "^0.0.8",
+    "fflate": "^0.8.2",
+    "miijs": "^3.0.5",
+    "qrcode-generator": "^2.0.4"
+  }
+}
