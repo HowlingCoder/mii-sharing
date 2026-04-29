@@ -18,15 +18,15 @@ The goal here is a different workflow: open the app directly on your homebrew Sw
 - Nintendo Switch with homebrew enabled
 - Tomodachi Life: Living the Dream
 
+## 📸 Screenshots
+![Switch](docs/screenshots/switch.png)
+![Import dialog](docs/screenshots/mii-list.png)
+![Mii list view](docs/screenshots/backup.png)
+
 ## 🚀 Usage
 
 **Deploy to Switch:**
-
-```
-pnpm deploy
-```
-
-Then copy the resulting `.nro` to your Switch (e.g. via `pnpm push` if `SWITCH_IP` is set).
+Copy the resulting `.nro` to your Switch.
 
 **Running:**
 
@@ -74,10 +74,6 @@ Each file contains:
 
 The facepaint data uses the NSW block-linear swizzle layout. The deswizzle algorithm used here was ported from [tomodachi-texture-tool](https://github.com/farbensplasch/tomodachi-texture-tool).
 
-## 📸 Screenshots
-![Switch](docs/screenshots/switch.png)
-![Import dialog](docs/screenshots/mii-list.png)
-![Mii list view](docs/screenshots/backup.png)
 
 ## 🙏 Acknowledgements
 
