@@ -1,4 +1,4 @@
-# Mii Sharing — Tomodachi Life: Living the Dream
+# Mii Sharing (beta) — Homebrew App 
 
 <p align="center"><img src="docs/screenshots/logo.png" alt="Mii Sharing Logo" width="200" /></p>
 
@@ -9,9 +9,14 @@ Fan-made homebrew app for Nintendo Switch that lets you view, export, and import
 
 ## 🛋️ Motivation
 
-Other tools like [Azkun/ShareMii](https://github.com/Azkun/ShareMii) require you to dump your save file to a PC, make changes there, and re-upload it to the Switch. That works — but it's a lot of steps just to add a friend's Mii - and I am too lazy for that :D.
+Other awesome tools like [Azkun/ShareMii](https://github.com/Azkun/ShareMii) require dumping your save to a PC, editing it there, and re-uploading — a lot of steps just to add a friend's Mii. This app takes a different approach:
 
-The goal here is a different workflow: open the app directly on your homebrew Switch, browse your Miis, and import or export without ever touching a save file or getting up from the couch. Your Switch serves the UI over the local network, so you can use any phone or browser on the same WiFi — Switch in the dock, phone in hand, done. If you need a solution to edit your whole savefile easily, have a look at ShareMii. 
+- **No PC needed** — runs directly on your homebrew Switch
+- **Any browser** — your Switch serves the UI over local WiFi, use your phone or laptop
+- **Direct TomodachiShare integration** — browse [tomodachishare.com](https://tomodachishare.com), paste a link, done
+- **Couch-friendly** — Switch in the dock, phone in hand
+
+> Need to edit your whole save file? [ShareMii](https://github.com/Azkun/ShareMii) has you covered.
 
 ## 📋 Requirements
 
@@ -20,7 +25,11 @@ The goal here is a different workflow: open the app directly on your homebrew Sw
 
 ## 📸 Screenshots
 ![Switch](docs/screenshots/switch.png)
+
 ![Import dialog](docs/screenshots/mii-list.png)
+
+![TomodachiShare](docs/screenshots/tomodachi-share.png)
+
 ![Mii list view](docs/screenshots/backup.png)
 
 ## 🚀 Usage
@@ -40,40 +49,9 @@ Click a Mii in the list, then click "Export as .ltd". The browser downloads a `.
 
 Click an occupied slot, then click "Import .ltd" and select a `.ltd` file from your device.
 
-## 🛠️ Local Development
+**Downloading from TomodachiShare:**
 
-Requirements: Node.js, pnpm
-
-```
-pnpm install
-```
-
-Start the dev server against a local save file (requires a real `Mii.sav`):
-
-```
-MII_SAV_PATH=./testdata/Mii.sav pnpm dev
-```
-
-To develop the web UI against a running Switch app:
-
-```
-API_URL=http://<switch-ip>:8080 pnpm web:dev
-```
-
-## 📄 File Format
-
-`.ltd` files use the **ltds** (Tomodachi Life Data Sharing) format, originally created by [Star-F0rce/ShareMii](https://github.com/Star-F0rce/ShareMii) and also used by [Azkun/ShareMii](https://github.com/Azkun/ShareMii). This app targets the current version of the format — note that the spec may evolve over time and compatibility is not guaranteed for future revisions.
-
-Each file contains:
-
-- `CharInfoRaw` — the raw Mii character data from the save
-- Personality — 18 × uint32 values
-- Name and pronunciation strings (UTF-16LE)
-- Sexuality flags
-- Optional: facepaint canvas (NSW block-linear swizzled RGBA8, 256×256) and ugctex blob, stored as compressed blobs after a fixed 428-byte header
-
-The facepaint data uses the NSW block-linear swizzle layout. The deswizzle algorithm used here was ported from [tomodachi-texture-tool](https://github.com/farbensplasch/tomodachi-texture-tool).
-
+Find a Mii you like on [tomodachishare.com](https://tomodachishare.com), copy the link (e.g. `https://tomodachishare.com/mii/51259`), click **"Download from TomodachiShare"** in the app, paste the link and hit Import. No file download, no PC — the Mii goes straight into the selected slot.
 
 ## 🙏 Acknowledgements
 

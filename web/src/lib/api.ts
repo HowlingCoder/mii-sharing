@@ -22,6 +22,16 @@ export async function importMii(slot: number, file: File): Promise<void> {
     if (!res.ok) throw new Error(data.error);
 }
 
+export async function importMiiBuffer(slot: number, buf: ArrayBuffer): Promise<void> {
+    const res = await fetch(`/mii/${slot}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: buf,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+}
+
 export async function fetchBackups(): Promise<Backup[]> {
     const res = await fetch('/backups');
     if (!res.ok) throw new Error(await res.text());

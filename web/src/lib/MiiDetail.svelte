@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { exportMii, importMii } from './api.ts';
+    import { exportMii, importMii, importMiiBuffer } from './api.ts';
+
+    const CORS_PROXY = 'https://cors-anywhere.hc-streaming.com';
     import { GENDER_LABELS, type Mii, type Status } from './types.ts';
     import { facepaintUrl } from './facepaint.ts';
     import Icon from './Icon.svelte';
@@ -12,6 +14,12 @@
     let busy = $state(false);
     let facepaintLoaded = $state(false);
     let modal = $state<{ message: string; onConfirm: () => void } | null>(null);
+
+    type TsPhase = 'input' | 'confirm';
+    interface TsInfo { id: number; name: string; platform: string }
+    interface TsModalState { phase: TsPhase; url: string; loading: boolean; error: string | null; info: TsInfo | null }
+
+    let tsModal = $state<TsModalState | null>(null);
 
     function setStatus(msg: string, ok: boolean) {
         status = { msg, ok };
@@ -54,6 +62,59 @@
                 }
             },
         };
+    }
+
+    function openTsModal() {
+        tsModal = { phase: 'input', url: '', loading: false, error: null, info: null };
+    }
+
+    function parseTsId(rawUrl: string): number | null {
+        const m = rawUrl.trim().match(/tomodachishare\.com\/mii\/(\d+)/);
+        return m ? parseInt(m[1], 10) : null;
+    }
+
+    async function checkTsUrl() {
+        if (!tsModal) return;
+        const id = parseTsId(tsModal.url);
+        if (id === null) {
+            tsModal.error = 'Invalid URL. Expected: https://tomodachishare.com/mii/12345';
+            return;
+        }
+        tsModal.loading = true;
+        tsModal.error = null;
+        try {
+            const res = await fetch(`${CORS_PROXY}/https://api.tomodachishare.com/api/mii/${id}/info`);
+            if (!res.ok) throw new Error(`Mii not found (${res.status})`);
+            const data = await res.json() as { id: number; name: string; platform: string; isFromSaveFile: boolean };
+            if (!data.isFromSaveFile) throw new Error('This Mii has no downloadable .ltd file');
+            tsModal.info = { id: data.id, name: data.name, platform: data.platform };
+            tsModal.phase = 'confirm';
+        } catch (e) {
+            tsModal.error = e instanceof Error ? e.message : String(e);
+        } finally {
+            tsModal.loading = false;
+        }
+    }
+
+    async function doTsImport() {
+        if (!tsModal?.info) return;
+        const { id, name } = tsModal.info;
+        tsModal.loading = true;
+        tsModal.error = null;
+        try {
+            const res = await fetch(`${CORS_PROXY}/https://api.tomodachishare.com/mii/${id}/download`);
+            if (!res.ok) throw new Error(`Download failed (${res.status})`);
+            const buf = await res.arrayBuffer();
+            await importMiiBuffer(mii.slot, buf);
+            tsModal = null;
+            setStatus(`"${name}" imported into slot ${mii.slot}!`, true);
+            onImported();
+        } catch (e) {
+            if (tsModal) {
+                tsModal.error = e instanceof Error ? e.message : String(e);
+                tsModal.loading = false;
+            }
+        }
     }
 
     const gender = $derived(GENDER_LABELS[mii.gender] ?? String(mii.gender));
@@ -143,33 +204,48 @@
         <section>
             <h3 class="text-xs font-bold uppercase tracking-wider text-sw-text-muted mb-3">Transfer</h3>
             <div class="flex flex-col gap-3">
+
                 <button
-                    onclick={doExport}
+                    onclick={openTsModal}
                     disabled={busy}
                     class="w-full py-4 rounded-xl bg-td-yellow text-sw-text font-bold text-base
                            hover:bg-td-yellow-dark active:scale-[0.98] transition-all
                            disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                    <Icon name="download" width={18} height={18} />
-                    Export as .ltd
+                    <img src="https://tomodachishare.com/favicon.svg" class="w-5 h-5" alt="" />
+                    Download from TomodachiShare
                 </button>
 
-                <label class="w-full {busy ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}">
-                    <input
-                        bind:this={importFile}
-                        type="file"
-                        accept=".ltd"
-                        class="hidden"
-                        onchange={doImport}
+                <div class="flex gap-3">
+                    <button
+                        onclick={doExport}
                         disabled={busy}
-                    />
-                    <span class="flex items-center justify-center gap-2 w-full py-4 rounded-xl
-                                 border-2 border-td-yellow text-sw-text font-bold text-base
-                                 hover:bg-td-yellow-light active:scale-[0.98] transition-all">
-                        <Icon name="upload" width={18} height={18} />
-                        Import .ltd
-                    </span>
-                </label>
+                        class="flex-1 py-4 rounded-xl border-2 border-td-yellow text-sw-text font-bold text-base
+                               hover:bg-td-yellow-light active:scale-[0.98] transition-all
+                               disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                        <Icon name="download" width={18} height={18} />
+                        Export .ltd
+                    </button>
+
+                    <label class="flex-1 {busy ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}">
+                        <input
+                            bind:this={importFile}
+                            type="file"
+                            accept=".ltd"
+                            class="hidden"
+                            onchange={doImport}
+                            disabled={busy}
+                        />
+                        <span class="flex items-center justify-center gap-2 w-full py-4 rounded-xl
+                                     border-2 border-td-yellow text-sw-text font-bold text-base
+                                     hover:bg-td-yellow-light active:scale-[0.98] transition-all">
+                            <Icon name="upload" width={18} height={18} />
+                            Import .ltd
+                        </span>
+                    </label>
+                </div>
+
             </div>
         </section>
 
@@ -178,4 +254,85 @@
 
 {#if modal}
     <Modal message={modal.message} confirmLabel="Replace" onConfirm={modal.onConfirm} onCancel={() => modal = null} />
+{/if}
+
+{#if tsModal}
+    <div
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        role="dialog"
+        aria-modal="true"
+    >
+        <div class="bg-sw-surface border border-sw-border rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4">
+
+            <div class="flex items-center gap-3 mb-5">
+                <img src="https://tomodachishare.com/favicon.svg" class="w-7 h-7" alt="TomodachiShare" />
+                <h2 class="text-base font-bold">Download from TomodachiShare</h2>
+            </div>
+
+            {#if tsModal.phase === 'input'}
+                <p class="text-sm text-sw-text-muted mb-3">Paste a TomodachiShare Mii link:</p>
+                <input
+                    type="url"
+                    bind:value={tsModal.url}
+                    placeholder="https://tomodachishare.com/mii/51259"
+                    class="w-full px-3 py-2.5 rounded-lg bg-sw-bg border border-sw-border text-sw-text text-sm
+                           focus:outline-none focus:border-td-yellow mb-3"
+                    onkeydown={(e) => { if (e.key === 'Enter') checkTsUrl(); }}
+                    disabled={tsModal.loading}
+                />
+                {#if tsModal.error}
+                    <p class="text-red-500 text-xs mb-3">{tsModal.error}</p>
+                {/if}
+                <div class="flex gap-3 justify-end">
+                    <button
+                        onclick={() => { tsModal = null; }}
+                        disabled={tsModal.loading}
+                        class="px-4 py-2 rounded-lg border border-sw-border text-sw-text-muted text-sm
+                               hover:border-td-yellow hover:text-sw-text transition-colors disabled:opacity-40"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onclick={checkTsUrl}
+                        disabled={tsModal.loading || !tsModal.url.trim()}
+                        class="px-4 py-2 rounded-lg bg-td-yellow text-sw-text text-sm font-semibold
+                               hover:bg-td-yellow-dark active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        {tsModal.loading ? 'Checking…' : 'Check'}
+                    </button>
+                </div>
+
+            {:else}
+                <div class="bg-sw-bg border border-sw-border rounded-lg px-4 py-3 mb-4">
+                    <div class="font-semibold text-sm">{tsModal.info!.name}</div>
+                    <div class="text-sw-text-muted text-xs mt-0.5">{tsModal.info!.platform} · #{tsModal.info!.id}</div>
+                </div>
+                <p class="text-sm text-sw-text-muted mb-4">
+                    Import into slot <strong class="text-sw-text">{mii.slot}</strong> ({mii.name || 'No name'})?
+                </p>
+                {#if tsModal.error}
+                    <p class="text-red-500 text-xs mb-3">{tsModal.error}</p>
+                {/if}
+                <div class="flex gap-3 justify-end">
+                    <button
+                        onclick={() => { tsModal = null; }}
+                        disabled={tsModal.loading}
+                        class="px-4 py-2 rounded-lg border border-sw-border text-sw-text-muted text-sm
+                               hover:border-td-yellow hover:text-sw-text transition-colors disabled:opacity-40"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onclick={doTsImport}
+                        disabled={tsModal.loading}
+                        class="px-4 py-2 rounded-lg bg-td-yellow text-sw-text text-sm font-semibold
+                               hover:bg-td-yellow-dark active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        {tsModal.loading ? 'Importing…' : 'Import'}
+                    </button>
+                </div>
+            {/if}
+
+        </div>
+    </div>
 {/if}

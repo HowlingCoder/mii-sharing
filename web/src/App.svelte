@@ -22,7 +22,11 @@
         loading = true; error = null;
         try {
             miis = await fetchMiis();
-            if (miis.length > 0 && !selected) selected = miis[0];
+            if (selected) {
+                selected = miis.find(m => m.slot === selected!.slot) ?? miis[0] ?? null;
+            } else if (miis.length > 0) {
+                selected = miis[0];
+            }
         } catch (e) {
             error = String(e);
         } finally {
