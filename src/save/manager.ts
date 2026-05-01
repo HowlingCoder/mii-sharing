@@ -93,7 +93,7 @@ function locateSection(data: Uint8Array, hashHex: string): number {
 }
 
 function resolveOffsets(data: Uint8Array): SaveOffsets {
-    return {
+    const offsets: SaveOffsets = {
         rawData:     locateSection(data, MII_HASHES.rawData),
         names:       locateSection(data, MII_HASHES.names),
         pronoun:     locateSection(data, MII_HASHES.pronoun),
@@ -101,6 +101,14 @@ function resolveOffsets(data: Uint8Array): SaveOffsets {
         facepaint:   locateSection(data, MII_HASHES.facepaint),
         personality: PERSONALITY_HASHES.map(h => locateSection(data, h)),
     };
+
+    const critical = ['rawData', 'names', 'pronoun', 'sexuality'] as const;
+    const missing = critical.filter(k => offsets[k] === -1);
+    if (missing.length > 0) {
+        throw new Error(`Save structure not recognized (missing: ${missing.join(', ')}) – wrong game version or corrupted save?`);
+    }
+
+    return offsets;
 }
 
 // ── SaveManager ────────────────────────────────────────────────────────────────
@@ -215,6 +223,33 @@ export class SaveManager {
         } else {
             miiSav.fill(0xFF, off.facepaint + slot * 4, off.facepaint + slot * 4 + 4);
         }
+    }
+
+    getDebugInfo(): Record<string, unknown> {
+        const { offsets: off, miiSav } = this;
+        const offsetStatus: Record<string, number> = {
+            rawData:   off.rawData,
+            names:     off.names,
+            pronoun:   off.pronoun,
+            sexuality: off.sexuality,
+            facepaint: off.facepaint,
+        };
+        off.personality.forEach((v, i) => { offsetStatus[`personality_${i}`] = v; });
+
+        let miiCount = 0;
+        if (off.rawData !== -1) {
+            for (let slot = 0; slot < MII_SLOT_COUNT; slot++) {
+                const start = off.rawData + slot * CHAR_INFO_RAW_SIZE;
+                if (!isEmptySlot(miiSav.slice(start, start + CHAR_INFO_RAW_SIZE))) miiCount++;
+            }
+        }
+
+        return {
+            saveSize: miiSav.byteLength,
+            miiCount,
+            offsets: offsetStatus,
+            missingOffsets: Object.entries(offsetStatus).filter(([, v]) => v === -1).map(([k]) => k),
+        };
     }
 
     async getFacepaintPng(slot: number): Promise<Uint8Array | null> {

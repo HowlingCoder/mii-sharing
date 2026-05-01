@@ -42,10 +42,13 @@ let appIcon:        ImageBitmap | null = null;
 const logLines: string[] = [];
 const prevButtons = new Uint8Array(32);
 
+let _onLog: ((msg: string) => void) | undefined;
+
 function addLog(msg: string): void {
     const ts = new Date().toLocaleTimeString();
     logLines.unshift(`[${ts}] ${msg}`);
     if (logLines.length > 60) logLines.pop();
+    _onLog?.(msg);
     dirty = true;
 }
 
@@ -302,7 +305,8 @@ function setStatus(msg: string, ok: boolean): void {
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
-export async function startUI(manager: SaveManager): Promise<void> {
+export async function startUI(manager: SaveManager, onLog?: (msg: string) => void): Promise<void> {
+    _onLog = onLog;
     setLogHandler(addLog);
     addLog('startUI()');
 

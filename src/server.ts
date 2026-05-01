@@ -1,12 +1,12 @@
 import { listen } from '@nx.js/http';
-import { SaveManager, listBackups, restoreBackup, readBackup, deleteBackup } from './save/index.ts';
+import { SaveManager, listBackups, restoreBackup, readBackup, deleteBackup, setLogHandler } from './save/index.ts';
 import { toNxBytes } from './types/nx.ts';
 
 const PORT = 8080;
 
 const eventLog: Array<{ time: string; msg: string }> = [];
 
-function logEvent(msg: string): void {
+export function logEvent(msg: string): void {
     eventLog.unshift({ time: new Date().toISOString(), msg });
     if (eventLog.length > 50) eventLog.pop();
 }
@@ -40,6 +40,7 @@ async function readStaticFile(path: string): Promise<Response> {
 }
 
 export function startServer(manager: SaveManager): void {
+    setLogHandler(logEvent);
     listen({
         port: PORT,
         async fetch(req: Request): Promise<Response> {
@@ -176,6 +177,15 @@ export function startServer(manager: SaveManager): void {
 
             if (method === 'GET' && path === '/log') {
                 return json(eventLog);
+            }
+
+            if (method === 'GET' && path === '/debug') {
+                return json({
+                    ok: true,
+                    saveManagerLoaded: true,
+                    ...manager.getDebugInfo(),
+                    recentLog: eventLog.slice(0, 10),
+                });
             }
 
             return new Response('Not Found', { status: 404 });

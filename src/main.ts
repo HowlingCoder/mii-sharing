@@ -1,5 +1,5 @@
 import { SaveManager } from './save/index.ts';
-import { startServer } from './server.ts';
+import { startServer, logEvent } from './server.ts';
 import { startUI } from './ui.ts';
 import { type NxScreen } from './types/nx.ts';
 
@@ -43,7 +43,7 @@ async function main(): Promise<void> {
     drawStatus('Starting UI…');
 
     try {
-        await startUI(manager);
+        await startUI(manager, logEvent);
     } catch (e) {
         drawStatus(`UI Error: ${String(e).slice(0, 80)}`, '#FF4444');
         await new Promise(() => {});

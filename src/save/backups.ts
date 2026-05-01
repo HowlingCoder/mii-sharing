@@ -4,8 +4,9 @@ import { toNxBytes } from '../types/nx.ts';
 
 // ── Log routing ───────────────────────────────────────────────────────────────
 
-let logFn: (msg: string) => void = () => {};
-export function setLogHandler(fn: (msg: string) => void): void { logFn = fn; }
+const logHandlers: Array<(msg: string) => void> = [];
+function logFn(msg: string): void { logHandlers.forEach(fn => fn(msg)); }
+export function setLogHandler(fn: (msg: string) => void): void { logHandlers.push(fn); }
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 
