@@ -1,5 +1,5 @@
 import { listen } from '@nx.js/http';
-import { SaveManager, listBackups, restoreBackup, readBackup, deleteBackup, setLogHandler } from './save/index.ts';
+import { SaveManager, listBackups, restoreBackup, readBackup, deleteBackup } from './save/index.ts';
 import { toNxBytes } from './types/nx.ts';
 
 const PORT = 8080;
@@ -40,7 +40,6 @@ async function readStaticFile(path: string): Promise<Response> {
 }
 
 export function startServer(manager: SaveManager): void {
-    setLogHandler(logEvent);
     listen({
         port: PORT,
         async fetch(req: Request): Promise<Response> {
@@ -167,7 +166,7 @@ export function startServer(manager: SaveManager): void {
                         headers: {
                             'Content-Type': 'image/png',
                             'Access-Control-Allow-Origin': '*',
-                            'Cache-Control': 'max-age=300',
+                            'Cache-Control': 'no-cache',
                         },
                     });
                 } catch (e) {

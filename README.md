@@ -59,7 +59,7 @@ Find a Mii you like on [tomodachishare.com](https://tomodachishare.com), copy th
 - [Azkun/ShareMii](https://github.com/Azkun/ShareMii) — reference implementation for ltds and inspiration for the overall approach.
 - [tomodachi-texture-tool](https://github.com/farbensplasch/tomodachi-texture-tool) by farbensplasch — MIT License. The NSW block-linear deswizzle algorithm used for facepaint canvas decoding was ported from this project.
 - [nx.js](https://github.com/TooTallNate/nx.js) by TooTallNate — the JavaScript runtime this app is built on.
-- [Tomodachi Share](https://tomodachishare.com) — community platform for sharing Miis. The Mii used in the screenshots was sourced from [tomodachishare.com/mii/45762](https://tomodachishare.com/mii/45762).
+- [Tomodachi Share](https://tomodachishare.com) — community platform for sharing Miis. 
 
 ## 🤖 AI Disclosure
 

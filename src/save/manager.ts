@@ -22,6 +22,18 @@ const PERSONALITY_HASHES: readonly string[] = [
     'AB8AE08B', '2545E583', '6CF484F4',
 ];
 
+// Player.sav facepaint registration (UGC.Facepaint.*, 4 bytes per facepaint ID)
+const FP_PLAYER_HASHES = {
+    price:   '4C9819E4',
+    srcType: 'DECC8954',
+    state:   '23135BC5',
+    unknown: 'FFC750B6',
+    hash:    'A56E42EC',
+} as const;
+
+const FP_ACTIVE_BYTES   = { price: [0xF4,0x01,0x00,0x00], srcType: [0x41,0x49,0x93,0x56], state: [0xF4,0xAD,0x7F,0x1D], unknown: [0x00,0x80,0x00,0x00] };
+const FP_INACTIVE_BYTES = { price: [0x00,0x00,0x00,0x00], srcType: [0x09,0xDE,0xEE,0xB6], state: [0xA5,0x8A,0xFF,0xAF], unknown: [0x00,0x00,0x00,0x00] };
+
 // ── Binary helpers ─────────────────────────────────────────────────────────────
 
 function hexToBytes(hex: string): Uint8Array {
@@ -84,6 +96,24 @@ interface SaveOffsets {
     personality: number[];
 }
 
+interface PlayerFpOffsets {
+    price: number;
+    srcType: number;
+    state: number;
+    unknown: number;
+    hash: number;
+}
+
+function resolvePlayerFpOffsets(data: Uint8Array): PlayerFpOffsets {
+    return {
+        price:   locateSection(data, FP_PLAYER_HASHES.price),
+        srcType: locateSection(data, FP_PLAYER_HASHES.srcType),
+        state:   locateSection(data, FP_PLAYER_HASHES.state),
+        unknown: locateSection(data, FP_PLAYER_HASHES.unknown),
+        hash:    locateSection(data, FP_PLAYER_HASHES.hash),
+    };
+}
+
 function locateSection(data: Uint8Array, hashHex: string): number {
     const hash = hexToBytes(hashHex).reverse();
     const idx = findBytes(data, hash);
@@ -115,29 +145,40 @@ function resolveOffsets(data: Uint8Array): SaveOffsets {
 
 export class SaveManager {
     private miiSav: Uint8Array;
+    private playerSav: Uint8Array;
     private offsets: SaveOffsets;
+    private playerFpOffsets: PlayerFpOffsets;
 
     private constructor(
         miiSav: Uint8Array,
+        playerSav: Uint8Array,
         readonly saveUrl: URL,
         readonly saveData: SaveDataHandle,
     ) {
         this.miiSav = miiSav;
+        this.playerSav = playerSav;
         this.offsets = resolveOffsets(miiSav);
+        this.playerFpOffsets = resolvePlayerFpOffsets(playerSav);
     }
 
     static async load(): Promise<SaveManager> {
         const { url, saveData } = await mountSave();
-        const buf = await Switch.readFile(new URL('Mii.sav', url));
-        if (!buf) throw new Error('Mii.sav not found');
-        return new SaveManager(new Uint8Array(buf), url, saveData);
+        const miiBuf = await Switch.readFile(new URL('Mii.sav', url));
+        if (!miiBuf) throw new Error('Mii.sav not found');
+        const playerBuf = await Switch.readFile(new URL('Player.sav', url));
+        if (!playerBuf) throw new Error('Player.sav not found');
+        return new SaveManager(new Uint8Array(miiBuf), new Uint8Array(playerBuf), url, saveData);
     }
 
     async reload(): Promise<void> {
-        const buf = await Switch.readFile(new URL('Mii.sav', this.saveUrl));
-        if (!buf) throw new Error('Mii.sav not found');
-        this.miiSav = new Uint8Array(buf);
+        const miiBuf = await Switch.readFile(new URL('Mii.sav', this.saveUrl));
+        if (!miiBuf) throw new Error('Mii.sav not found');
+        const playerBuf = await Switch.readFile(new URL('Player.sav', this.saveUrl));
+        if (!playerBuf) throw new Error('Player.sav not found');
+        this.miiSav = new Uint8Array(miiBuf);
+        this.playerSav = new Uint8Array(playerBuf);
         this.offsets = resolveOffsets(this.miiSav);
+        this.playerFpOffsets = resolvePlayerFpOffsets(this.playerSav);
     }
 
     getMiiSummaries(): MiiSummary[] {
@@ -214,13 +255,23 @@ export class SaveManager {
 
         if (ltd.canvas || ltd.ugctex) {
             let fpIndex = miiSav[off.facepaint + slot * 4];
-            if (fpIndex === 0xFF) fpIndex = slot % 99;
+            if (fpIndex === 0xFF) {
+                const used = new Set<number>();
+                for (let s = 0; s < MII_SLOT_COUNT; s++) {
+                    const id = miiSav[off.facepaint + s * 4];
+                    if (id !== 0xFF) used.add(id);
+                }
+                for (let i = 0; i < 99; i++) { if (!used.has(i)) { fpIndex = i; break; } }
+            }
             const urls = facepaintUrls(this.saveUrl, fpIndex);
             if (ltd.canvas)  Switch.writeFileSync(urls.canvas,  toNxBytes(ltd.canvas));
             if (ltd.ugctex)  Switch.writeFileSync(urls.ugctex, toNxBytes(ltd.ugctex));
             miiSav.fill(0x00, off.facepaint + slot * 4, off.facepaint + slot * 4 + 4);
             miiSav[off.facepaint + slot * 4] = fpIndex;
+            this.registerFacepaint(fpIndex);
         } else {
+            const fpIndex = miiSav[off.facepaint + slot * 4];
+            if (fpIndex !== 0xFF) this.deregisterFacepaint(fpIndex);
             miiSav.fill(0xFF, off.facepaint + slot * 4, off.facepaint + slot * 4 + 4);
         }
     }
@@ -244,12 +295,44 @@ export class SaveManager {
             }
         }
 
+        const facepaintEntries: Record<string, string> = {};
+        if (off.facepaint !== -1) {
+            for (let s = 0; s < MII_SLOT_COUNT; s++) {
+                const base = off.facepaint + s * 4;
+                const bytes = Array.from(miiSav.slice(base, base + 4))
+                    .map(b => b.toString(16).padStart(2, '0')).join(' ');
+                facepaintEntries[`slot_${s}`] = bytes;
+            }
+        }
+
         return {
             saveSize: miiSav.byteLength,
             miiCount,
             offsets: offsetStatus,
             missingOffsets: Object.entries(offsetStatus).filter(([, v]) => v === -1).map(([k]) => k),
+            facepaintEntries,
         };
+    }
+
+    private setFpPlayerBytes(fpIndex: number, vals: typeof FP_ACTIVE_BYTES): void {
+        const p = this.playerFpOffsets;
+        const s = this.playerSav;
+        if (p.price   !== -1) s.set(vals.price,   p.price   + fpIndex * 4);
+        if (p.srcType !== -1) s.set(vals.srcType,  p.srcType + fpIndex * 4);
+        if (p.state   !== -1) s.set(vals.state,    p.state   + fpIndex * 4);
+        if (p.unknown !== -1) s.set(vals.unknown,  p.unknown + fpIndex * 4);
+    }
+
+    private registerFacepaint(fpIndex: number): void {
+        this.setFpPlayerBytes(fpIndex, FP_ACTIVE_BYTES);
+        const p = this.playerFpOffsets;
+        if (p.hash !== -1) this.playerSav.set([fpIndex, 0, 8, 0], p.hash + fpIndex * 4);
+    }
+
+    private deregisterFacepaint(fpIndex: number): void {
+        this.setFpPlayerBytes(fpIndex, FP_INACTIVE_BYTES);
+        const p = this.playerFpOffsets;
+        if (p.hash !== -1) this.playerSav.fill(0, p.hash + fpIndex * 4, p.hash + fpIndex * 4 + 4);
     }
 
     async getFacepaintPng(slot: number): Promise<Uint8Array | null> {
@@ -261,6 +344,7 @@ export class SaveManager {
     async save(): Promise<void> {
         await createBackup(this.saveUrl, 'pre-import');
         Switch.writeFileSync(new URL('Mii.sav', this.saveUrl), toNxBytes(this.miiSav));
+        Switch.writeFileSync(new URL('Player.sav', this.saveUrl), toNxBytes(this.playerSav));
         this.saveData.commit();
     }
 }
