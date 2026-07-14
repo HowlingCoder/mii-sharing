@@ -35,7 +35,7 @@ Other awesome tools like [Azkun/ShareMii](https://github.com/Azkun/ShareMii) req
 ## 🚀 Usage
 
 **Deploy to Switch:**
-Copy the resulting `.nro` to your Switch, preferrably to its own folder as file is created for debugging purposes.
+Copy the resulting `.nro` to your Switch, preferrably to its own folder as a file is created for debugging purposes.
 
 **Running:**
 
