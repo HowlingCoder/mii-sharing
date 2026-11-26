@@ -35,11 +35,15 @@ Other awesome tools like [Azkun/ShareMii](https://github.com/Azkun/ShareMii) req
 ## 🚀 Usage
 
 **Deploy to Switch:**
-Copy the resulting `.nro` to your Switch.
+Copy the resulting `.nro` to your Switch, preferrably to its own folder as a file is created for debugging purposes.
 
 **Running:**
 
-Once the app is launched on the Switch, it displays the Switch's local IP address. Open that address in a browser on any device on the same network (e.g. `http://192.168.1.x:8080`). Also supports mobile devices for easy side by side navigation.
+- Open your preferred homebrew menu using title takeover (by holding the 'R' button while launching any game) and (if applicable) select the user who's island you would like to import/export miis to/from (Tested with HBmenu 3.6.1 and Sphaira v1.0.0c). **IMPORTANT! Using applet mode (launching hbmenu using the album) WILL result in a no active user error.** 
+
+- Locate and launch the .nro you copied earlier
+
+- Once the app is launched on the Switch, it displays the Switch's local IP address. Open that address in a browser on any device on the same network (e.g. `http://192.168.1.x:8080`). Also supports mobile devices for easy side by side navigation.
 
 **Exporting a Mii:**
 
